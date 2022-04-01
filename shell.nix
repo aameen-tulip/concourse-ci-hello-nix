@@ -2,27 +2,33 @@
 , mkShell          ? pkgs.mkShell
 , fly              ? pkgs.fly
 , docker           ? pkgs.docker
+, docker-compose   ? pkgs.docker-compose
 , concourse-docker ? pkgs.callPackage ./concourse-docker.nix {}
 }:
 mkShell {
   buildInputs = [
     fly
     docker
+    docker-compose
     concourse-docker
   ];
 
-  CONCOURSE_DOCKER_COMPOSE_YML = "${concourse-docker}/docker-compose.yml";
+  DOCKER_COMPOSE_YML = "${concourse-docker}/docker-compose.yml";
 
   shellHook = ''
     echo "The Concourse CI docker-compose.yml file is set as an env variable";
-    echo "  CONCOURSE_DOCKER_COMPOSE_YML = $CONCOURSE_DOCKER_COMPOSE_YML";
+    echo "  DOCKER_COMPOSE_YML = $DOCKER_COMPOSE_YML";
     echo "";
 
+    function concourse_docker() {
+      ${docker-compose}/bin/docker-compose -f $DOCKER_COMPOSE_YML $@;
+    }
+
     function concourse_up() {
-      ${docker}/bin/docker-compose up -d -f $CONCOURSE_DOCKER_COMPOSE_YML;
+      concourse_docker up -d;
     }
     function concourse_down() {
-      ${docker}/bin/docker-compose down -d -f $CONCOURSE_DOCKER_COMPOSE_YML;
+      concourse_docker down --remove-orphans;
     }
     echo "The shell function concourse_up and concourse_down start/kill";
     echo "docker-compose running the Concourse CI image.";
